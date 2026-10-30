@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Visual AI Agent Workflow Builder (DAG Studio)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background-color: #090a10; color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+  <!-- Top Navbar -->
+  <header class="border-b border-slate-800 bg-slate-900/60 px-6 py-4 flex items-center justify-between sticky top-0 z-20 backdrop-blur">
+    <div class="flex items-center gap-3">
+      <div class="p-2 bg-purple-600/20 border border-purple-500/40 rounded-lg text-purple-400">
+        <svg class="w-5 h-5 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+      </div>
+      <div>
+        <h1 class="text-lg font-bold text-white flex items-center gap-2">
+          Visual AI Agent Workflow Builder
+          <span class="text-[10px] px-2 py-0.5 rounded-full bg-purple-950 text-purple-400 border border-purple-800 font-mono">FastAPI DAG :8082</span>
+        </h1>
+        <p class="text-xs text-slate-400">Asynchronous DAG execution engine with conditional branching and AI nodes</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-3">
+      <button onclick="runDAG()" class="px-4 py-2 text-xs font-semibold rounded-lg bg-purple-600 hover:bg-purple-500 text-white shadow-lg transition">Run Workflow DAG</button>
+    </div>
+  </header>
+
+  <!-- Content -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-6 py-8 space-y-8">
+    <div class="p-6 rounded-2xl border border-slate-800 bg-slate-900/40 space-y-4">
+      <div>
+        <span class="text-xs font-mono text-purple-400 uppercase tracking-wider font-semibold">Workflow Graph</span>
+        <h2 class="text-xl font-bold text-white mt-0.5">Customer Feedback AI Auto-Triage & Escalation</h2>
+        <p class="text-xs text-slate-400 mt-1">Multi-step asynchronous DAG execution pipeline with sentiment evaluation, branching condition, and priority incident alerting.</p>
+      </div>
+
+      <div class="pt-3 border-t border-slate-800 flex flex-col md:flex-row gap-3">
+        <input id="input-text" type="text" value="Your API is failing and returning 500 errors. Please refund!" class="flex-1 px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-200 text-xs focus:outline-none focus:border-purple-500 font-mono" />
+        <button onclick="setNegativePreset()" class="px-3 py-2 rounded-lg bg-red-950 text-red-300 text-xs border border-red-900">Negative Bug</button>
+        <button onclick="setPositivePreset()" class="px-3 py-2 rounded-lg bg-emerald-950 text-emerald-300 text-xs border border-emerald-900">Positive Praise</button>
+      </div>
+    </div>
+
+    <!-- Output preview -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div class="p-6 rounded-2xl border border-slate-800 bg-slate-900/40 space-y-4">
+        <h3 class="text-base font-semibold text-white">Execution Steps Timeline</h3>
+        <div id="steps-container" class="space-y-2 text-xs font-mono">
+          <div class="text-slate-500 p-8 text-center">Click "Run Workflow DAG" above to execute.</div>
+        </div>
+      </div>
+
+      <div class="p-6 rounded-2xl border border-slate-800 bg-slate-900/40 space-y-4">
+        <h3 class="text-base font-semibold text-white">Final Aggregated Output</h3>
+        <pre id="output-json" class="p-4 bg-slate-950 border border-slate-800 rounded-xl text-emerald-400 font-mono text-xs overflow-x-auto min-h-[200px]">// Aggregated output will appear here</pre>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const API = 'http://localhost:8082';
+
+    function setNegativePreset() {
+      document.getElementById('input-text').value = 'Your API is failing and returning 500 errors. Please refund!';
+    }
+    function setPositivePreset() {
+      document.getElementById('input-text').value = 'Love your product! Setup took 2 minutes and works smoothly.';
+    }
+
+    async function runDAG() {
+      const text = document.getElementById('input-text').value;
+      try {
+        const res = await fetch(`${API}/api/v1/workflows/wf_feedback_triage_01/run`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ input_data: { text: text } })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          renderSteps(data.steps);
+          document.getElementById('output-json').innerText = JSON.stringify(data.final_output, null, 2);
+        } else {
+          const err = await res.json();
+          alert('Error: ' + (err.detail || 'Failed'));
+        }
+      } catch (e) {
+        alert('Could not connect to FastAPI backend on http://localhost:8082.\nRun: cd backend && python -m uvicorn app.main:app --port 8082');
+      }
+    }
+
+    function renderSteps(steps) {
+      document.getElementById('steps-container').innerHTML = steps.map(s => {
+        const badge = s.status === 'success' 
+          ? `<span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800 text-[10px]">SUCCESS (${s.latency_ms}ms)</span>`
+          : `<span class="px-2 py-0.5 rounded bg-slate-800 text-slate-500 text-[10px]">SKIPPED</span>`;
+        return `
+          <div class="p-3 bg-slate-950 border border-slate-800 rounded-lg flex items-center justify-between">
+            <div>
+              <div class="text-white font-semibold">${s.node_label}</div>
+              <div class="text-[11px] text-slate-400 mt-0.5">${s.node_type}</div>
+            </div>
+            ${badge}
+          </div>
+        `;
+      }).join('');
+    }
+  </script>
+</body>
+</html>
